@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NetMqReplier/NetMqReplier.csproj" />
+    <Project Path="src/TestClient/TestClient.csproj" />
+  </Folder>
+</Solution>
