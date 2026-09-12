@@ -176,7 +176,7 @@ sincronización, sin logging y sin conversiones.
 2000 mensajes por corrida, manager en `192.168.0.31` por LAN (ping < 1 ms),
 replier .NET 10 JIT.
 
-| Workers | Concurrencia | msg/s | p50 (ms) | p90 (ms) | p99 (ms) |
+| Workers Servidor | Concurrencia Cliente | msg/s | p50 (ms) | p90 (ms) | p99 (ms) |
 |---|---|---|---|---|---|
 | 1 | 1 | 863 | 1.00 | 1.56 | 2.99 |
 | 1 | 8 | 1947 | 2.72 | 7.14 | 16.4 |

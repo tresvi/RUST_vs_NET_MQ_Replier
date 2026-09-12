@@ -17,7 +17,7 @@ Cada entrada: fecha, commit, entorno y tabla. La metodología está en
 - 2000 mensajes medidos por corrida, warm-up 10 por hilo, **una corrida por
   celda** (salvo donde se indica).
 
-| Workers | Concurrencia | msg/s | p50 (ms) | p90 (ms) | p99 (ms) | max (ms) | Notas |
+| Workers Servidor | Concurrencia Cliente | msg/s | p50 (ms) | p90 (ms) | p99 (ms) | max (ms) | Notas |
 |---|---|---|---|---|---|---|---|
 | 1 | 1 | 863 | 1.00 | 1.56 | 2.99 | 13.3 | |
 | 1 | 8 | 1947 | 2.72 | 7.14 | 16.4 | 45.1 | |
