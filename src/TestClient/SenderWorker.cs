@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
+using System.Text;
 using IBM.WMQ;
 
 namespace NetMqReplier;
@@ -17,6 +18,11 @@ public sealed class SenderWorker : IDisposable
     private readonly MQQueue _queueIn;
     private readonly MQPutMessageOptions _pmo;
     private readonly MQGetMessageOptions _gmo;
+
+    private readonly Encoding _encoding;
+    private readonly int _characterSet;
+    private readonly string _format;
+    private readonly byte[]? _fixedPayload; // null => texto generado por mensaje
 
     public double[] Latencies { get; }
     public int Measured { get; private set; }
@@ -38,6 +44,12 @@ public sealed class SenderWorker : IDisposable
             MatchOptions = MQC.MQMO_MATCH_CORREL_ID,
         };
 
+        _characterSet = test.CharacterSet;
+        _encoding = Ccsid.GetEncoding(test.CharacterSet);
+        _format = string.IsNullOrWhiteSpace(test.Format) ? MQC.MQFMT_NONE : test.Format;
+        if (!string.IsNullOrEmpty(test.Message))
+            _fixedPayload = _encoding.GetBytes(test.Message);
+
         Latencies = new double[messageCount];
     }
 
@@ -58,18 +70,19 @@ public sealed class SenderWorker : IDisposable
 
     private void RoundTrip(int seq, bool measured, bool verbose)
     {
-        string text = $"hola mundo #{seq} hilo {_id} ñandú {DateTime.UtcNow:O}";
+        byte[] payload = _fixedPayload
+            ?? _encoding.GetBytes($"hola mundo #{seq} hilo {_id} ñandú {DateTime.UtcNow:O}");
 
         var put = new MQMessage
         {
-            Format = MQC.MQFMT_STRING,
-            CharacterSet = 1208,
+            Format = _format,
+            CharacterSet = _characterSet,
             MessageId = MQC.MQMI_NONE,
             CorrelationId = MQC.MQCI_NONE,
             Persistence = MQC.MQPER_NOT_PERSISTENT,
             ReplyToQueueName = _settings.ReplyQueue,
         };
-        put.WriteString(text);
+        put.Write(payload);
 
         long start = Stopwatch.GetTimestamp();
         _queueOut.Put(put, _pmo);
@@ -87,13 +100,21 @@ public sealed class SenderWorker : IDisposable
         }
         double ms = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
-        string echo = get.ReadString(get.MessageLength);
-        bool ok = echo == text && get.MessageType == MQC.MQMT_REPLY;
+        // Se compara en bytes: el replier hace echo sin conversiones y debe devolver
+        // el mismo payload, formato y CCSID. (Con ReplyMessage fijo en el replier, ok=false es esperado.)
+        byte[] echo = get.ReadBytes(get.MessageLength);
+        bool ok = echo.AsSpan().SequenceEqual(payload)
+                  && get.MessageType == MQC.MQMT_REPLY
+                  && get.CharacterSet == _characterSet
+                  && get.Format.TrimEnd() == _format.TrimEnd();
         if (!ok) Errors++;
         if (measured) Latencies[Measured++] = ms;
 
         if (!ok || verbose)
-            Console.WriteLine($"[hilo {_id}] #{seq}{(measured ? "" : " (warmup)")} {ms:F2} ms  ok={ok}  echo=\"{echo}\"");
+        {
+            string text = _encoding.GetString(echo);
+            Console.WriteLine($"[hilo {_id}] #{seq}{(measured ? "" : " (warmup)")} {ms:F2} ms  ok={ok}  fmt={get.Format.TrimEnd()} ccsid={get.CharacterSet} echo=\"{text}\"");
+        }
     }
 
     public void Dispose()
