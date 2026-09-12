@@ -1,0 +1,21 @@
+* Definiciones mínimas para reproducir el entorno del benchmark en un manager local.
+* Se ejecutan automáticamente al arrancar el contenedor (ver docker-compose.yml).
+
+* Colas del escenario request/reply
+DEFINE QLOCAL('BNA.TU5.PEDIDO')    MAXDEPTH(100000) DEFPSIST(NO) REPLACE
+DEFINE QLOCAL('BNA.TU5.RESPUESTA') MAXDEPTH(100000) DEFPSIST(NO) REPLACE
+
+* Canal de conexión de clientes.
+* SHARECNV(1): una conversación por socket; mejor latencia que el default 10.
+DEFINE CHANNEL('CHANNEL1') CHLTYPE(SVRCONN) TRPTYPE(TCP) SHARECNV(1) MCAUSER('app') REPLACE
+
+* Entorno de desarrollo: sin autenticación de canal ni de conexión.
+* NO usar en un manager real.
+SET CHLAUTH('CHANNEL1') TYPE(BLOCKUSER) USERLIST('nobody') ACTION(REPLACE)
+SET CHLAUTH('CHANNEL1') TYPE(ADDRESSMAP) ADDRESS('*') USERSRC(CHANNEL) ACTION(REPLACE)
+ALTER QMGR CHLAUTH(DISABLED) CONNAUTH(' ')
+REFRESH SECURITY TYPE(CONNAUTH)
+
+* Permisos para el usuario del canal sobre las colas
+SET AUTHREC OBJTYPE(QMGR) PRINCIPAL('app') AUTHADD(CONNECT,INQ)
+SET AUTHREC PROFILE('BNA.TU5.**') OBJTYPE(QUEUE) PRINCIPAL('app') AUTHADD(PUT,GET,INQ,BROWSE)

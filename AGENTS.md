@@ -24,9 +24,16 @@ src/
   TestClient/          Generador de carga y medición de latencia/throughput.
     Program.cs         Reparte la cuota entre hilos, Barrier de arranque, métricas agregadas.
     SenderWorker.cs    Un hilo emisor: put -> get por CorrelId, conexión propia.
-    TestSettings.cs    POCO de la sección "Test".
+    Ccsid.cs           CCSID de MQ -> Encoding de .NET.
+    TestSettings.cs    POCO de la sección "Test" (cantidad, warm-up, concurrencia, mensaje, CCSID, formato).
     appsettings.json   Misma sección "Mq" + sección "Test".
-docs/                  Vacío por ahora.
+docs/
+  PRD.md               Objetivos, contrato funcional, métricas y metodología.
+  adr/                 Decisiones de arquitectura (leer antes de cambiar API MQ, hilos o contrato).
+  mq-setup.md          Manager de referencia, Docker local, diagnóstico por Reason code.
+  benchmarks.md        Bitácora de mediciones; agregar una entrada por corrida relevante.
+docker/                docker-compose + MQSC para levantar un MQGD local.
+CLAUDE.md              Apunta a este archivo.
 ```
 
 ## Comandos
@@ -78,6 +85,13 @@ timeouts o echos incorrectos.
   afecta la latencia con mensajes disponibles.
 - `appsettings.json` se copia a la salida (`PreserveNewest`); los comentarios
   `//` son válidos para el lector de configuración de .NET.
+- El TestClient verifica el echo comparando **bytes + Format + CharacterSet**;
+  si se cambia `Test.CharacterSet`, el texto se codifica con ese CCSID
+  (`Ccsid.cs`). Caracteres que no existan en la code page se pierden al
+  codificar, no en el viaje.
+- Toda decisión nueva que cambie API MQ, modelo de hilos o contrato
+  request/reply va como ADR nuevo en `docs/adr/`; los resultados de
+  benchmark van a `docs/benchmarks.md`, no al README.
 
 ## Cuando se agregue una variante (AOT, Rust)
 

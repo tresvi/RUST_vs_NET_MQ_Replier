@@ -91,9 +91,20 @@ Misma sección `Mq` (para apuntar al mismo manager y colas) más:
 | `Test.WarmupCount` | `10` | Mensajes previos por hilo, excluidos de la medición |
 | `Test.ReplyTimeoutMs` | `5000` | Espera máxima por cada respuesta; un timeout cuenta como error |
 | `Test.Concurrency` | `1` | Hilos emisores en paralelo = mensajes en vuelo |
+| `Test.Message` | `null` | Texto fijo de cada pedido. Si es null, se genera uno distinto por mensaje (secuencia, hilo, timestamp) |
+| `Test.CharacterSet` | `1208` | CCSID con el que se codifica el texto y se marca el MQMD (1208 UTF-8, 819 ISO-8859-1, 1252, 37/500/1047 EBCDIC...) |
+| `Test.Format` | `MQSTR` | Formato del MQMD; vacío = `MQFMT_NONE` |
 
 Los archivos admiten comentarios `//` (el lector de configuración de .NET los
 tolera).
+
+## Documentación adicional
+
+- [`docs/PRD.md`](docs/PRD.md) — objetivos, contrato funcional, métricas y metodología del benchmark.
+- [`docs/adr/`](docs/adr/README.md) — decisiones de arquitectura con contexto y alternativas.
+- [`docs/mq-setup.md`](docs/mq-setup.md) — entorno MQ de referencia, manager local con Docker, diagnóstico.
+- [`docs/benchmarks.md`](docs/benchmarks.md) — bitácora de mediciones.
+- [`AGENTS.md`](AGENTS.md) — guía operativa y trampas conocidas.
 
 ## Decisiones de diseño
 
@@ -151,9 +162,14 @@ sincronización, sin logging y sin conversiones.
   local sin sincronización.
 - Una `Barrier` arranca el reloj de pared cuando **todos** los hilos terminaron
   su warm-up, así el throughput no incluye el JIT ni el primer `MQOPEN`.
+- El payload se codifica con el CCSID configurado (`Ccsid.cs` mapea CCSID →
+  `Encoding`, registrando las code pages no Unicode) y se envía como bytes;
+  la verificación del echo compara **bytes, `Format` y `CharacterSet`**, no
+  strings, así sirve para cualquier charset.
 - Métricas: `avg/min/p50/p90/p99/max` de latencia (agregadas sobre todos los
   hilos), tiempo de pared y throughput en msg/s. Un timeout o un echo
   incorrecto cuentan como error y hacen que el proceso salga con código 1.
+  Con `ReplyMessage` fijo en el replier, `ok=false` es lo esperado.
 
 ## Resultados de referencia
 

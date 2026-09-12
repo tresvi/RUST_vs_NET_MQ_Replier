@@ -1,0 +1,17 @@
+# Queue manager local equivalente a MQGD para desarrollo y benchmarks.
+#   docker compose -f docker/docker-compose.yml up -d
+# Luego apuntar Mq.ServerIp a "localhost" en los appsettings.json.
+services:
+  mq:
+    image: icr.io/ibm-messaging/mq:latest
+    container_name: mqgd
+    environment:
+      LICENSE: accept
+      MQ_QMGR_NAME: MQGD
+      MQ_APP_PASSWORD: ""      # sin password: el canal no exige credenciales
+      MQ_ENABLE_METRICS: "false"
+    ports:
+      - "1414:1414"   # listener
+      - "9443:9443"   # consola web (admin / passw0rd por defecto)
+    volumes:
+      - ./mq/20-config.mqsc:/etc/mqm/20-config.mqsc:ro
